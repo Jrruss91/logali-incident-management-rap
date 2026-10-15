@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>Clase de mensaje Incidents</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>Error creating initial incident history</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>Initial incident history is missing</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>Incident ID cannot be empty</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>Creation date cannot be in the future</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Changed date cannot be earlier than creation date</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Creation date cannot be empty</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Status cannot be changed for a finalized incident</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Pending incidents cannot be completed or closed directly</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>Invalid incident status selected</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>010</MSGNR>
+     <TEXT>New status must be different from current status</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>

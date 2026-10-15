@@ -1,0 +1,98 @@
+managed implementation in class zbp_i_incident_3606 unique;
+strict ( 2 );
+with draft;
+
+define behavior for ZI_INCIDENT_3606 alias Incident
+persistent table zdt_inct_3606
+draft table zdt_inct_d_3606
+lock master
+total etag LastChangeAt
+authorization master ( instance )
+etag master LocalLastChangeAt
+{
+  create ( authorization : global );
+  update;
+  delete;
+  field ( readonly, numbering : managed ) IncUuid;
+  field ( readonly ) IncidentId, Status, CreateDate, ChangedDate,
+  LocalCreatedBy, LocalCreatedAt, LocalLastChangeBy,
+  LocalLastChangeAt, LastChangeAt;
+
+  field ( mandatory ) Title,
+  Description, Priority;
+  association _History { create; with draft; }
+
+  draft action Edit;
+  draft action Activate;
+  draft action Discard;
+  draft action Resume;
+  draft determine action Prepare
+  {
+    determination createInitialHistory;
+    validation validateInitialHistory;
+    validation validateIncidentId;
+    validation validateDates;
+  }
+
+  determination setInitialValues on modify { create; }
+  determination createInitialHistory on save { create; }
+
+  validation validateInitialHistory on save { create; }
+  validation validateIncidentId on save { create; }
+  validation validateDates on save { create; field CreateDate, ChangedDate; }
+
+  action ( features : instance, authorization : update ) changeStatus parameter ZA_CHANGE_STATUS_3606 result [1] $self;
+
+  mapping for zdt_inct_3606
+    {
+      IncUuid           = inc_uuid;
+      IncidentId        = incident_id;
+      Title             = title;
+      Description       = description;
+      Status            = status;
+      Priority          = priority;
+      CreateDate        = create_date;
+      ChangedDate       = changed_date;
+      LocalCreatedBy    = local_created_by;
+      LocalCreatedAt    = local_created_at;
+      LocalLastChangeBy = local_last_change_by;
+      LocalLastChangeAt = local_last_change_at;
+      LastChangeAt      = last_change_at;
+    }
+
+}
+
+
+define behavior for ZI_INCIDENT_H_3606 alias History
+persistent table zdt_inct_h_3606
+draft table zdt_inct_h_d3606
+lock dependent by _Incident
+authorization dependent by _Incident
+etag master LocalLastChangeAt
+{
+  update;
+  delete;
+  field ( readonly, numbering : managed ) HisUuid;
+  field ( readonly ) IncUuid, HisId,
+  LocalCreatedBy, LocalCreatedAt,
+  LocalLastChangeBy, LocalLastChangeAt,
+  LastChangeAt;
+  association _Incident { with draft; }
+
+
+  mapping for zdt_inct_h_3606
+    {
+      HisUuid           = his_uuid;
+      IncUuid           = inc_uuid;
+      HisId             = his_id;
+      PreviousStatus    = previous_status;
+      NewStatus         = new_status;
+      Text              = text;
+      LocalCreatedBy    = local_created_by;
+      LocalCreatedAt    = local_created_at;
+      LocalLastChangeBy = local_last_change_by;
+      LocalLastChangeAt = local_last_change_at;
+      LastChangeAt      = last_change_at;
+    }
+
+}

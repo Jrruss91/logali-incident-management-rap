@@ -1,0 +1,98 @@
+@Metadata.layer: #CORE
+
+@UI.headerInfo: {
+    typeName: 'Incident',
+    typeNamePlural: 'Incidents',
+    title: {
+        type: #STANDARD,
+        criticalityRepresentation: #WITHOUT_ICON,
+        value: 'IncidentId' }
+}
+
+@UI.presentationVariant: [{ sortOrder: [{ by: 'IncidentId', direction: #ASC }],
+                            visualizations: [{ type: #AS_LINEITEM }] }]
+
+annotate entity ZC_INCIDENT_3606 with
+{
+
+  @UI.facet: [{ id: 'Incident',
+                purpose: #STANDARD,
+                type: #IDENTIFICATION_REFERENCE,
+                label: 'Incident',
+                position: 10 },
+              { id: 'History',
+                purpose: #STANDARD,
+                type: #LINEITEM_REFERENCE,
+                label: 'History',
+                position: 20,
+                targetElement: '_History' }]
+
+  @UI.lineItem: [{ type: #FOR_ACTION,
+                   dataAction: 'changeStatus',
+                   label: 'Change Status',
+                   importance: #HIGH }]
+
+  @UI.identification: [{ type: #FOR_ACTION,
+                         dataAction: 'changeStatus',
+                         label: 'Change Status' }]
+
+  IncUuid;
+
+  @UI : { lineItem: [{ position: 10,
+                       importance: #MEDIUM,
+                       label: 'Incident ID' }],
+          identification: [{ position: 10,
+                             label: 'Incident ID' }] }
+
+  IncidentId;
+
+  @UI : { lineItem: [{ position: 20,
+                       label: 'Title',
+                       importance: #LOW }],
+          identification: [{ position: 20,
+                             label: 'Title' }] }
+
+  Title;
+
+  @UI : { lineItem: [{ position: 30,
+                       importance: #LOW,
+                       label: 'Description' }],
+          identification: [{ position: 30,
+                             label: 'Description' }] }
+
+  Description;
+
+  @UI : { lineItem: [{ position: 40,
+                       importance: #LOW,
+                       label: 'Status' }],
+          selectionField: [{ position: 10 }],
+          identification: [{ position: 40,
+                             label: 'Status' }] }
+
+  Status;
+
+  @UI : { lineItem: [{ position: 50,
+                       importance: #LOW,
+                       label: 'Incident Priority' }],
+          selectionField: [{ position: 20 }],
+          identification: [{ position: 50,
+                             label: 'Priority' }]}
+
+  Priority;
+
+  @UI : { lineItem: [{ position: 60,
+                       importance: #LOW,
+                       label: 'Created Date' }],
+          identification: [{ position: 60,
+                             label: 'Created Date' }] }
+  CreateDate;
+
+  @UI : { lineItem: [{ position: 70,
+                     importance: #LOW,
+                     label: 'Changed Date' }],
+          identification: [{ position: 70,
+                             label: 'Changed Date' }] }
+
+  ChangedDate;
+
+}

@@ -1,0 +1,47 @@
+@Metadata.layer: #CORE
+@UI.createHidden: true
+
+@UI.headerInfo: {
+    typeName: 'History',
+    typeNamePlural: 'Histories',
+    title: {
+        type: #STANDARD,
+        label: 'History',
+        criticalityRepresentation: #WITHOUT_ICON,
+        value: 'HisId'
+    }
+}
+
+@UI.presentationVariant: [{ sortOrder: [{ by: 'HisId', direction: #ASC }],
+                            visualizations: [{ type: #AS_LINEITEM }] }]
+
+annotate entity ZC_INCIDENT_H_3606 with
+{
+  @UI.lineItem: [{
+     position: 10,
+     importance: #MEDIUM,
+     label: 'History ID'
+   }]
+  HisId;
+
+  @UI.lineItem: [{
+    position: 20,
+    importance: #LOW,
+    label: 'Previous Status'
+  }]
+  PreviousStatus;
+
+  @UI.lineItem: [{
+    position: 30,
+    importance: #LOW,
+    label: 'New Status'
+  }]
+  NewStatus;
+
+  @UI.lineItem: [{
+    position: 40,
+    importance: #LOW,
+    label: 'Observation'
+  }]
+  Text;
+}
