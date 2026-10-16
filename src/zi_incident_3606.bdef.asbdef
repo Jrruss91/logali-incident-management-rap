@@ -12,7 +12,7 @@ etag master LocalLastChangeAt
 {
   create ( authorization : global );
   update;
-  delete;
+  delete ( features : instance );
   field ( readonly, numbering : managed ) IncUuid;
   field ( readonly ) IncidentId, Status, CreateDate, ChangedDate,
   LocalCreatedBy, LocalCreatedAt, LocalLastChangeBy,
@@ -29,19 +29,26 @@ etag master LocalLastChangeAt
   draft determine action Prepare
   {
     determination createInitialHistory;
+    determination assignIncidentId;
     validation validateInitialHistory;
     validation validateIncidentId;
-    validation validateDates;
+    validation ( always ) validateDates;
+    validation ( always ) validateMandatoryFields;
   }
 
   determination setInitialValues on modify { create; }
   determination createInitialHistory on save { create; }
+  determination assignIncidentId on save { create; }
+  determination setChangedDate on modify { field Title, Description, Priority, Responsible; }
 
   validation validateInitialHistory on save { create; }
   validation validateIncidentId on save { create; }
-  validation validateDates on save { create; field CreateDate, ChangedDate; }
+  validation validateDates on save { create; update; field CreateDate, ChangedDate; }
+  validation validateMandatoryFields on save { create; update; }
 
   action ( features : instance, authorization : update ) changeStatus parameter ZA_CHANGE_STATUS_3606 result [1] $self;
+
+  side effects { action changeStatus affects field Status, field ChangedDate, entity _History; }
 
   mapping for zdt_inct_3606
     {
@@ -51,6 +58,7 @@ etag master LocalLastChangeAt
       Description       = description;
       Status            = status;
       Priority          = priority;
+      Responsible       = responsible;
       CreateDate        = create_date;
       ChangedDate       = changed_date;
       LocalCreatedBy    = local_created_by;

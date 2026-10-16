@@ -68,6 +68,24 @@
      <MSGNR>010</MSGNR>
      <TEXT>New status must be different from current status</TEXT>
     </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>011</MSGNR>
+     <TEXT>A responsible user must be assigned before setting the incident to In Pro</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>012</MSGNR>
+     <TEXT>Only the assigned responsible user or an administrator can change the inc</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZMC_INCIDENT_3606</ARBGB>
+     <MSGNR>013</MSGNR>
+     <TEXT>The field &amp;1 is mandatory</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

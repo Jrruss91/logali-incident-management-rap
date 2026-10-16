@@ -11,6 +11,7 @@ define root view entity ZI_INCIDENT_3606
       description          as Description,
       status               as Status,
       priority             as Priority,
+      responsible          as Responsible,
       create_date          as CreateDate,
       changed_date         as ChangedDate,
       @Semantics.user.createdBy: true

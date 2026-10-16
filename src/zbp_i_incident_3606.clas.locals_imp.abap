@@ -41,6 +41,12 @@ CLASS lhc_Incident DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS changeStatus FOR MODIFY
        keys FOR ACTION Incident~changeStatus RESULT result.
+    METHODS assignIncidentId FOR DETERMINE ON SAVE
+       keys FOR Incident~assignIncidentId.
+    METHODS validateMandatoryFields FOR VALIDATE ON SAVE
+       keys FOR Incident~validateMandatoryFields.
+    METHODS setChangedDate FOR DETERMINE ON MODIFY
+       keys FOR Incident~setChangedDate.
 
 ENDCLASS.
 
@@ -48,9 +54,18 @@ CLASS lhc_Incident IMPLEMENTATION.
 
   METHOD get_instance_authorizations.
 
-    result = VALUE #( FOR key IN keys ( %tky = key-%tky
+    READ ENTITIES OF zi_incident_3606 IN LOCAL
+      MODE ENTITY Incident
+      FIELDS ( Status )
+      WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_incidents)
+      FAILED failed.
+
+    result = VALUE #( FOR ls_incident IN lt_incidents ( %tky = ls_incident-%tky
                                         %update = if_abap_behv=>auth-allowed
-                                        %delete = if_abap_behv=>auth-allowed
+                                        %delete = COND #( WHEN ls_incident-Status = incident_status-open
+                                                          THEN if_abap_behv=>auth-allowed
+                                                          ELSE if_abap_behv=>auth-unauthorized )
                                         %action-Edit = if_abap_behv=>auth-allowed ) ).
 
   ENDMETHOD.
@@ -70,95 +85,42 @@ CLASS lhc_Incident IMPLEMENTATION.
 
     DATA lt_updates TYPE TABLE FOR UPDATE zi_incident_3606.
 
-    READ ENTITIES OF zi_incident_3606
-      IN LOCAL MODE
+    READ ENTITIES OF zi_incident_3606 IN LOCAL MODE
       ENTITY Incident
-      FIELDS ( IncidentId CreateDate Status )
+      FIELDS ( Status CreateDate )
       WITH CORRESPONDING #( keys )
       RESULT DATA(lt_incidents).
 
-    DELETE lt_incidents WHERE IncidentId IS NOT INITIAL
-                          AND Status IS NOT INITIAL
-                          AND CreateDate IS NOT INITIAL.
-
-    CHECK lt_incidents IS NOT INITIAL.
-
     LOOP AT lt_incidents ASSIGNING FIELD-SYMBOL(<fs_incident>).
 
-      " Asignamos el valor al campo status
       IF <fs_incident>-Status IS INITIAL.
         <fs_incident>-Status = incident_status-open.
       ENDIF.
 
-      " Asignamos el valor al campo created date
       IF <fs_incident>-CreateDate IS INITIAL.
-        <fs_incident>-CreateDate = cl_abap_context_info=>get_system_date( ).
+        <fs_incident>-CreateDate =
+          cl_abap_context_info=>get_system_date( ).
       ENDIF.
 
-      IF <fs_incident>-IncidentId IS INITIAL.
-        " Procedemos a crear la numeración del campo Incident ID
-        DATA(lo_number_range) = cl_numberrange_buffer=>get_instance( ).
-        TRY.
-
-            lo_number_range->if_numberrange_buffer~number_get_main_memory(
-              EXPORTING
-                iv_object            = 'ZINCID3606'
-                iv_interval          = '01'
-                iv_quantity          = '1'
-              IMPORTING
-                ev_number            = DATA(lv_number)
-                ev_returncode        = DATA(lt_returncode)
-                ev_returned_quantity = DATA(lv_quantity)
-            ).
-
-            IF lv_number IS INITIAL OR lv_quantity <> 1.
-              APPEND VALUE #(
-               %tky = <fs_incident>-%tky
-               %element-IncidentId = if_abap_behv=>mk-on
-               %msg = new_message(
-               id   = 'ZMC_INCIDENT_3606'
-               number = '003'
-               severity = if_abap_behv_message=>severity-error
-             )
-            ) TO reported-incident.
-
-              CONTINUE.
-
-            ENDIF.
-
-            <fs_incident>-IncidentId = lv_number.
-
-          CATCH cx_number_ranges INTO DATA(lx_error).
-
-            APPEND VALUE #(
-             %tky = <fs_incident>-%tky
-             %element-IncidentId = if_abap_behv=>mk-on
-             %msg = new_message_with_text(
-             text = lx_error->get_text( )
-             severity = if_abap_behv_message=>severity-error
-             )
-           ) TO reported-incident.
-
-            CONTINUE.
-        ENDTRY.
-
-      ENDIF.
-      APPEND VALUE #( %tky       = <fs_incident>-%tky
-                      IncidentId = <fs_incident>-IncidentId
-                      CreateDate = <fs_incident>-CreateDate
-                      Status     = <fs_incident>-Status ) TO lt_updates.
+      APPEND VALUE #(
+        %tky       = <fs_incident>-%tky
+        Status     = <fs_incident>-Status
+        CreateDate = <fs_incident>-CreateDate
+      ) TO lt_updates.
 
     ENDLOOP.
 
     IF lt_updates IS NOT INITIAL.
-      MODIFY ENTITIES OF zi_incident_3606 IN LOCAL
-        MODE ENTITY Incident
-        UPDATE
-        FIELDS ( IncidentId CreateDate Status )
+
+      MODIFY ENTITIES OF zi_incident_3606 IN LOCAL MODE
+        ENTITY Incident
+        UPDATE FIELDS ( Status CreateDate )
         WITH lt_updates
         REPORTED DATA(lt_reported).
 
-      reported = CORRESPONDING #( DEEP BASE ( reported ) lt_reported ).
+      reported = CORRESPONDING #(
+        DEEP BASE ( reported ) lt_reported
+      ).
 
     ENDIF.
 
@@ -198,6 +160,7 @@ CLASS lhc_Incident IMPLEMENTATION.
 
       APPEND VALUE #( %tky = <fs_incident>-%tky
                       %target = VALUE #( ( %cid      = |HIST{ lv_cid }|
+                                           %is_draft = <fs_incident>-%is_draft
                                            HisId     = '00000001'
                                            NewStatus = incident_status-open
                                            text      = 'First Incident' ) ) ) TO lt_create_history.
@@ -416,9 +379,26 @@ CLASS lhc_Incident IMPLEMENTATION.
 
   METHOD get_instance_features.
 
+    DATA lt_active_keys LIKE keys.
+
+    lt_active_keys = keys.
+
+    LOOP AT lt_active_keys ASSIGNING
+      FIELD-SYMBOL(<fs_active_key>).
+
+      <fs_active_key>-%is_draft = if_abap_behv=>mk-off.
+
+    ENDLOOP.
+
+    READ ENTITIES OF zi_incident_3606 IN LOCAL MODE
+      ENTITY Incident
+      FIELDS ( IncUuid )
+      WITH CORRESPONDING #( lt_active_keys )
+      RESULT DATA(lt_active_incidents).
+
     READ ENTITIES OF zi_incident_3606 IN LOCAL
        MODE ENTITY Incident
-       FIELDS ( Status )
+       FIELDS ( IncUuid Status )
        WITH CORRESPONDING #( keys )
        RESULT DATA(lt_incidents)
        FAILED failed.
@@ -428,8 +408,15 @@ CLASS lhc_Incident IMPLEMENTATION.
                       %features-%action-changeStatus = COND #( WHEN ls_incident-Status = incident_status-completed
                                                                  OR ls_incident-Status = incident_status-closed
                                                                  OR ls_incident-Status = incident_status-canceled
+                                                                 OR ( ls_incident-%is_draft = if_abap_behv=>mk-on
+                                                                      AND NOT line_exists(
+                                                                      lt_active_incidents[ KEY entity COMPONENTS
+                                                                                           IncUuid = ls_incident-IncUuid ] ) )
                                                                THEN if_abap_behv=>fc-o-disabled
-                                                               ELSE if_abap_behv=>fc-o-enabled ) ) ).
+                                                               ELSE if_abap_behv=>fc-o-enabled )
+                      %features-%delete = COND #( WHEN ls_incident-Status = incident_status-open
+                                                  THEN if_abap_behv=>fc-o-enabled
+                                                  ELSE if_abap_behv=>fc-o-disabled ) ) ).
 
   ENDMETHOD.
 
@@ -441,11 +428,19 @@ CLASS lhc_Incident IMPLEMENTATION.
     DATA lt_create_history
          TYPE TABLE FOR CREATE zi_incident_3606\_History.
 
+    DATA lv_next_his_id TYPE i.
+    DATA lv_history_cid TYPE i.
+
     DATA: lv_invalid TYPE abap_bool.
+
+    CONSTANTS lc_admin_user TYPE string
+        VALUE 'CB9980003606'.
+
+    DATA(lv_current_user) = cl_abap_context_info=>get_user_technical_name( ).
 
     READ ENTITIES OF zi_incident_3606 IN LOCAL
       MODE ENTITY Incident
-      FIELDS ( IncUuid Status )
+      FIELDS ( IncUuid Status Responsible )
       WITH CORRESPONDING #( keys )
       RESULT DATA(lt_incidents).
 
@@ -571,6 +566,44 @@ CLASS lhc_Incident IMPLEMENTATION.
 
       ENDIF.
 
+      " Validar responsable para estado In Progress
+      IF lv_new_status = incident_status-in_progress
+         AND <fs_incident>-Responsible IS INITIAL.
+
+        lv_invalid = abap_true.
+
+        APPEND VALUE #(
+          %tky                = <fs_key>-%tky
+          %state_area         = 'CHANGE_STATUS'
+          %element-Responsible = if_abap_behv=>mk-on
+
+          %msg = new_message(
+            id       = 'ZMC_INCIDENT_3606'
+            number   = '011'
+            severity = if_abap_behv_message=>severity-error
+          )
+        ) TO reported-incident.
+
+      ENDIF.
+
+      " Validar autorización para cambiar el estado
+      IF lv_current_user <> <fs_incident>-Responsible
+         AND lv_current_user <> lc_admin_user.
+
+        lv_invalid = abap_true.
+
+        APPEND VALUE #(
+          %tky        = <fs_key>-%tky
+          %state_area = 'CHANGE_STATUS'
+          %msg = new_message(
+            id       = 'ZMC_INCIDENT_3606'
+            number   = '012'
+            severity = if_abap_behv_message=>severity-error
+          )
+        ) TO reported-incident.
+
+      ENDIF.
+
       IF lv_invalid EQ abap_true.
         APPEND VALUE #(
           %tky = <fs_key>-%tky
@@ -578,6 +611,37 @@ CLASS lhc_Incident IMPLEMENTATION.
 
         CONTINUE.
       ENDIF.
+
+      " Obtener el siguiente identificador del historial
+      lv_next_his_id = 1.
+
+      LOOP AT lt_histories ASSIGNING FIELD-SYMBOL(<fs_history>)
+        WHERE IncUuid = <fs_incident>-IncUuid.
+
+        DATA(lv_existing_id) = CONV i( <fs_history>-HisId ).
+
+        IF lv_existing_id >= lv_next_his_id.
+          lv_next_his_id = lv_existing_id + 1.
+        ENDIF.
+
+      ENDLOOP.
+
+      lv_history_cid += 1.
+
+      APPEND VALUE #(
+        %tky = <fs_key>-%tky
+
+        %target = VALUE #(
+          (
+            %cid = |HIST{ lv_history_cid }|
+
+            HisId          = lv_next_his_id
+            PreviousStatus = lv_current_status
+            NewStatus      = lv_new_status
+            Text           = lv_observation
+          )
+        )
+      ) TO lt_create_history.
 
       " Preparar actualización del incidente
       APPEND VALUE #(
@@ -603,6 +667,350 @@ CLASS lhc_Incident IMPLEMENTATION.
 
       reported = CORRESPONDING #(
         DEEP BASE ( reported ) lt_update_reported
+      ).
+
+      " Excluir historiales de incidentes cuya actualización falló
+      LOOP AT lt_update_failed-incident
+        ASSIGNING FIELD-SYMBOL(<fs_failed_update>).
+
+        DELETE lt_create_history
+          WHERE %tky = <fs_failed_update>-%tky.
+
+      ENDLOOP.
+
+    ENDIF.
+
+    IF lt_create_history IS NOT INITIAL.
+
+      MODIFY ENTITIES OF zi_incident_3606 IN LOCAL MODE
+        ENTITY Incident
+        CREATE BY \_History
+        FIELDS ( HisId PreviousStatus NewStatus Text )
+        WITH lt_create_history
+        MAPPED DATA(lt_history_mapped)
+        FAILED DATA(lt_history_failed)
+        REPORTED DATA(lt_history_reported).
+
+      failed = CORRESPONDING #(
+        DEEP BASE ( failed ) lt_history_failed
+      ).
+
+      reported = CORRESPONDING #(
+        DEEP BASE ( reported ) lt_history_reported
+      ).
+
+    ENDIF.
+
+    READ ENTITIES OF zi_incident_3606 IN LOCAL MODE
+      ENTITY Incident
+      ALL FIELDS
+      WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_result_incidents).
+
+    LOOP AT lt_result_incidents
+    ASSIGNING FIELD-SYMBOL(<fs_result>).
+
+      IF line_exists(
+        failed-incident[ KEY id COMPONENTS
+                         %tky = <fs_result>-%tky ]
+      ).
+        CONTINUE.
+      ENDIF.
+
+      APPEND VALUE #(
+        %tky   = <fs_result>-%tky
+        %param = <fs_result>
+      ) TO result.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD assignIncidentId.
+
+    DATA lt_updates
+    TYPE TABLE FOR UPDATE zi_incident_3606.
+
+    READ ENTITIES OF zi_incident_3606 IN LOCAL MODE
+      ENTITY Incident
+      FIELDS ( IncidentId )
+      WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_incidents).
+
+    " Excluir incidentes que ya tienen identificador
+    DELETE lt_incidents
+      WHERE IncidentId IS NOT INITIAL.
+
+    CHECK lt_incidents IS NOT INITIAL.
+
+
+    DATA(lo_number_range) =
+      cl_numberrange_buffer=>get_instance( ).
+
+    LOOP AT lt_incidents
+      ASSIGNING FIELD-SYMBOL(<fs_incident>).
+      TRY.
+
+          lo_number_range->if_numberrange_buffer~number_get_main_memory(
+            EXPORTING
+              iv_object            = 'ZINCID3606'
+              iv_interval          = '01'
+              iv_quantity          = 1
+*              iv_ignore_buffer     =
+            IMPORTING
+              ev_number            = DATA(lv_number)
+              ev_returncode        = DATA(lv_returncode)
+*              ev_returned_quantity =
+          ).
+
+          IF lv_number IS INITIAL.
+
+            APPEND VALUE #(
+              %tky = <fs_incident>-%tky
+              %element-IncidentId = if_abap_behv=>mk-on
+              %msg = new_message(
+                id       = 'ZMC_INCIDENT_3606'
+                number   = '003'
+                severity = if_abap_behv_message=>severity-error
+              )
+            ) TO reported-incident.
+
+            CONTINUE.
+
+          ENDIF.
+
+          " Asignar el número generado
+          <fs_incident>-IncidentId = lv_number.
+
+          APPEND VALUE #(
+            %tky       = <fs_incident>-%tky
+            IncidentId = <fs_incident>-IncidentId
+          ) TO lt_updates.
+
+        CATCH cx_number_ranges INTO DATA(lx_error).
+
+          APPEND VALUE #(
+            %tky = <fs_incident>-%tky
+            %element-IncidentId = if_abap_behv=>mk-on
+            %msg = new_message_with_text(
+              text = lx_error->get_text( )
+              severity = if_abap_behv_message=>severity-error
+            )
+          ) TO reported-incident.
+
+          CONTINUE.
+
+      ENDTRY.
+
+    ENDLOOP.
+    IF lt_updates IS NOT INITIAL.
+
+      MODIFY ENTITIES OF zi_incident_3606 IN LOCAL MODE
+        ENTITY Incident
+        UPDATE FIELDS ( IncidentId )
+        WITH lt_updates
+        REPORTED DATA(lt_reported).
+
+      reported = CORRESPONDING #(
+        DEEP BASE ( reported ) lt_reported
+      ).
+
+    ENDIF.
+
+
+  ENDMETHOD.
+
+  METHOD validateMandatoryFields.
+
+    DATA lv_invalid TYPE abap_bool.
+
+    READ ENTITIES OF zi_incident_3606 IN LOCAL MODE
+      ENTITY Incident
+      FIELDS ( Title Description Priority Status CreateDate )
+      WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_incidents).
+*      FAILED failed.
+
+    LOOP AT lt_incidents
+      ASSIGNING FIELD-SYMBOL(<fs_incident>).
+
+      lv_invalid = abap_false.
+
+      " Limpiar mensajes anteriores de esta validación
+      APPEND VALUE #(
+        %tky        = <fs_incident>-%tky
+        %state_area = 'MANDATORY_FIELDS'
+      ) TO reported-incident.
+
+      " Validar Title
+      IF <fs_incident>-Title IS INITIAL.
+
+        lv_invalid = abap_true.
+
+        APPEND VALUE #(
+          %tky           = <fs_incident>-%tky
+          %state_area    = 'MANDATORY_FIELDS'
+          %element-Title = if_abap_behv=>mk-on
+          %msg = new_message(
+            id       = 'ZMC_INCIDENT_3606'
+            number   = '013'
+            v1       = 'Title'
+            severity = if_abap_behv_message=>severity-error
+          )
+        ) TO reported-incident.
+
+      ENDIF.
+
+      " Validar Description
+      IF <fs_incident>-Description IS INITIAL.
+
+        lv_invalid = abap_true.
+
+        APPEND VALUE #(
+          %tky                 = <fs_incident>-%tky
+          %state_area          = 'MANDATORY_FIELDS'
+          %element-Description = if_abap_behv=>mk-on
+          %msg = new_message(
+            id       = 'ZMC_INCIDENT_3606'
+            number   = '013'
+            v1       = 'Description'
+            severity = if_abap_behv_message=>severity-error
+          )
+        ) TO reported-incident.
+
+      ENDIF.
+
+      " Validar Priority
+      IF <fs_incident>-Priority IS INITIAL.
+
+        lv_invalid = abap_true.
+
+        APPEND VALUE #(
+          %tky              = <fs_incident>-%tky
+          %state_area       = 'MANDATORY_FIELDS'
+          %element-Priority = if_abap_behv=>mk-on
+          %msg = new_message(
+            id       = 'ZMC_INCIDENT_3606'
+            number   = '013'
+            v1       = 'Priority'
+            severity = if_abap_behv_message=>severity-error
+          )
+        ) TO reported-incident.
+
+      ENDIF.
+
+      " Validar Status
+      IF <fs_incident>-Status IS INITIAL.
+
+        lv_invalid = abap_true.
+
+        APPEND VALUE #(
+          %tky            = <fs_incident>-%tky
+          %state_area     = 'MANDATORY_FIELDS'
+          %element-Status = if_abap_behv=>mk-on
+          %msg = new_message(
+            id       = 'ZMC_INCIDENT_3606'
+            number   = '013'
+            v1       = 'Status'
+            severity = if_abap_behv_message=>severity-error
+          )
+        ) TO reported-incident.
+
+      ENDIF.
+
+      " Validar CreateDate
+      IF <fs_incident>-CreateDate IS INITIAL.
+
+        lv_invalid = abap_true.
+
+        APPEND VALUE #(
+          %tky                = <fs_incident>-%tky
+          %state_area         = 'MANDATORY_FIELDS'
+          %element-CreateDate = if_abap_behv=>mk-on
+          %msg = new_message(
+            id       = 'ZMC_INCIDENT_3606'
+            number   = '013'
+            v1       = 'CreateDate'
+            severity = if_abap_behv_message=>severity-error
+          )
+        ) TO reported-incident.
+
+      ENDIF.
+
+      " Impedir el guardado si hay campos vacíos
+      IF lv_invalid = abap_true.
+
+        APPEND VALUE #(
+          %tky = <fs_incident>-%tky
+        ) TO failed-incident.
+
+      ENDIF.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD setChangedDate.
+
+    DATA lt_updates
+    TYPE TABLE FOR UPDATE zi_incident_3606.
+
+    " Consultar si existe una versión activa
+    DATA(lt_active_keys) = keys.
+
+    LOOP AT lt_active_keys
+      ASSIGNING FIELD-SYMBOL(<fs_active_key>).
+
+      <fs_active_key>-%is_draft = if_abap_behv=>mk-off.
+
+    ENDLOOP.
+
+    READ ENTITIES OF zi_incident_3606 IN LOCAL MODE
+      ENTITY Incident
+      FIELDS ( IncUuid )
+      WITH CORRESPONDING #( lt_active_keys )
+      RESULT DATA(lt_active_incidents).
+
+    " Leer los incidentes que se están modificando
+    READ ENTITIES OF zi_incident_3606 IN LOCAL MODE
+      ENTITY Incident
+      FIELDS ( IncUuid ChangedDate )
+      WITH CORRESPONDING #( keys )
+      RESULT DATA(lt_incidents).
+
+    DATA(lv_today) =
+      cl_abap_context_info=>get_system_date( ).
+
+    LOOP AT lt_incidents
+      ASSIGNING FIELD-SYMBOL(<fs_incident>).
+
+      " No actualizar fecha durante la creación inicial
+      IF NOT line_exists(
+        lt_active_incidents[
+          KEY entity COMPONENTS
+          IncUuid = <fs_incident>-IncUuid
+        ]
+      ).
+        CONTINUE.
+      ENDIF.
+
+      APPEND VALUE #(
+        %tky        = <fs_incident>-%tky
+        ChangedDate = lv_today
+      ) TO lt_updates.
+
+    ENDLOOP.
+
+    IF lt_updates IS NOT INITIAL.
+
+      MODIFY ENTITIES OF zi_incident_3606 IN LOCAL MODE
+        ENTITY Incident
+        UPDATE FIELDS ( ChangedDate )
+        WITH lt_updates
+        REPORTED DATA(lt_reported).
+
+      reported = CORRESPONDING #(
+        DEEP BASE ( reported ) lt_reported
       ).
 
     ENDIF.

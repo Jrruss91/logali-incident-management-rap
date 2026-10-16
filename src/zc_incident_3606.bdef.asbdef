@@ -1,0 +1,29 @@
+projection;
+strict ( 2 );
+use draft;
+use side effects;
+
+define behavior for ZC_INCIDENT_3606 alias Incident
+{
+  use create;
+  use update;
+  use delete;
+
+  use action changeStatus;
+
+  use action Edit;
+  use action Activate;
+  use action Discard;
+  use action Resume;
+  use action Prepare;
+
+  use association _History { create; with draft; }
+}
+
+define behavior for ZC_INCIDENT_H_3606 alias History
+{
+  use update;
+  use delete;
+
+  use association _Incident { with draft; }
+}

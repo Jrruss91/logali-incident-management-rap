@@ -13,6 +13,7 @@ define root view entity ZC_INCIDENT_3606
       Description,
       Status,
       Priority,
+      Responsible,
       CreateDate,
       ChangedDate,
       LocalCreatedBy,

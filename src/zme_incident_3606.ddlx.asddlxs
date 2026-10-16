@@ -95,4 +95,12 @@ annotate entity ZC_INCIDENT_3606 with
 
   ChangedDate;
 
+  @UI : { lineItem: [{ position: 80,
+                     importance: #LOW,
+                     label: 'Responsible' }],
+          identification: [{ position: 80,
+                             label: 'Responsible' }] }
+
+  Responsible;
+
 }
