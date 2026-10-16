@@ -1,5 +1,7 @@
 @EndUserText.label: 'Incident Management Service'
 define service ZSD_INCIDENT_3606 {
-  expose ZC_INCIDENT_3606   as Incident;
-  expose ZC_INCIDENT_H_3606 as History;
+  expose ZC_INCIDENT_3606    as Incident;
+  expose ZC_INCIDENT_H_3606  as History;
+  expose ZI_STATUS_VH_3606   as StatusValueHelp;
+  expose ZI_PRIORITY_VH_3606 as PriorityValueHelp;
 }

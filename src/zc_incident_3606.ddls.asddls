@@ -11,7 +11,21 @@ define root view entity ZC_INCIDENT_3606
       IncidentId,
       Title,
       Description,
+      @Consumption.valueHelpDefinition: [{
+      entity: {
+      name: 'ZI_STATUS_VH_3606',
+      element: 'Status'
+      },
+      useForValidation: true
+      }]
       Status,
+      @Consumption.valueHelpDefinition: [{
+      entity: {
+      name: 'ZI_PRIORITY_VH_3606',
+      element: 'Priority'
+      },
+      useForValidation: true
+      }]
       Priority,
       Responsible,
       CreateDate,
